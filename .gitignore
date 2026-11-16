@@ -1,0 +1,6 @@
+commandpp
+commandpp.exe
+build/
+*.obj
+*.o
+*.exe

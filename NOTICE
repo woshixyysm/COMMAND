@@ -1,0 +1,19 @@
+commandpp — copyright and attribution notice
+=============================================
+
+commandpp is an independent re-implementation of the observable behaviour of
+the MS-DOS / Windows 95 COMMAND.COM command interpreter, written from scratch
+in modern C++. It contains no Microsoft source code, object code or binaries.
+
+Behaviour was derived from the published COMMAND.COM sources (used as a
+reference for semantics) and from the command set documented in the user
+manual. Implementation code in this repository is original.
+
+MS-DOS, Windows, COMMAND.COM and Microsoft are trademarks of Microsoft
+Corporation. The two-line startup banner printed by the interactive shell is
+reproduced only because it is part of the original program's observable
+output; it is a short factual copyright notice, not a claim of authorship or
+endorsement.
+
+The modern C++ implementation in this directory is provided for study and
+compatibility testing. Add your own licence terms here if you redistribute it.
