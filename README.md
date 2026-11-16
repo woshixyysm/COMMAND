@@ -1,89 +1,82 @@
 # commandpp
 
-A portable, from-scratch C++20 reimplementation of the command-interpreter behaviour of **Windows 95 COMMAND.COM** (reference build: 4.10.1053).
+A portable, from-scratch C++20 implementation of the command-interpreter behaviour of **Windows 95 COMMAND.COM**. The primary compatibility reference is Windows 95 OPK3, version **4.10.1053**.
 
-The project implements the command parser, internal commands, batch-file execution, environment handling, redirection and pipelines. It runs as a native program on Windows and POSIX systems; it does not emulate 16-bit DOS or call DOS interrupts.
+The project implements the shell's command dispatch, batch processing, environment handling, redirection and pipelines, together with a set of built-in commands. It builds as a native executable on Windows and POSIX systems; it does not emulate a 16-bit DOS environment or depend on DOS interrupts.
+
+## Features
+
+- Interactive shell and `/C` / `/K` command execution.
+- Batch files, parameters (`%0`–`%9`), environment expansion, `CALL`, `GOTO`, `SHIFT`, `IF` and `FOR`.
+- Input/output redirection (`<`, `>`, `>>`) and pipelines (`|`).
+- DOS-style command lookup, environment variables, prompt handling and path syntax.
+- Native execution of external programs through the host platform.
+
+### Built-in commands
+
+`CD`/`CHDIR`, `MD`/`MKDIR`, `RD`/`RMDIR`, `DIR`, `COPY`, `DEL`/`ERASE`, `REN`/`RENAME`, `TYPE`, `SET`, `PATH`, `PROMPT`, `ECHO`, `DATE`, `TIME`, `VER`, `VOL`, `CLS`, `BREAK`, `VERIFY`, `CHCP`, `CTTY`, `TRUENAME`, `LOADHIGH`/`LH`, `LFNFOR`, `CALL`, `GOTO`, `SHIFT`, `IF`, `FOR`, `PAUSE`, `REM` and `EXIT`.
+
+Command-specific help is available with `/?`.
 
 ## Build
 
-A C++20 compiler and CMake 3.20 or newer are required.
+### CMake
 
-### Windows
+Requires CMake 3.20 or later and a C++20 compiler.
 
-```powershell
+```sh
 cmake -S . -B build
-cmake --build build --config Release
+cmake --build build
 ```
 
-Run the test suite with:
-
-```powershell
-powershell -File tests\run-tests.ps1 -Exe .\build\Release\commandpp.exe
-```
-
-### Linux and Android (Termux)
+### Linux / Android (Termux)
 
 ```sh
 ./build-linux.sh
-bash tests/run-tests.sh ./commandpp
 ```
 
-The build script uses `clang++`, `g++` or `c++`, in that order, unless `CXX` is set.
+The script uses `clang++`, `g++` or `c++`, in that order. Set `CXX` to select a compiler explicitly.
 
 ## Usage
 
 ```text
-commandpp [/P] [/C command | /K command] [/?]
+commandpp [[drive:]path] [device] [/E:nnnnn] [/L:nnnn] [/U:nnn] [/P] [/MSG]
+          [/LOW] [/Y [/C|K command]]
 ```
 
-- `/C command` executes one command or batch file and exits.
-- `/K command` executes the command, then starts the interactive shell.
-- `/P` enables permanent mode, in which `EXIT` does not terminate the shell.
-- `/?` displays command help.
-
-With no command switch, commandpp starts an interactive session.
-
-## Implemented commands
-
-The current implementation includes:
-
-- **File and directory:** `DIR`, `COPY`, `DEL`/`ERASE`, `REN`/`RENAME`, `TYPE`, `CD`/`CHDIR`, `MD`/`MKDIR`, `RD`/`RMDIR`, `TRUENAME`
-- **Batch and flow control:** `CALL`, `GOTO`, `SHIFT`, `IF`, `FOR`, `PAUSE`, `REM`, `ECHO`
-- **Environment and session:** `SET`, `PATH`, `PROMPT`, `DATE`, `TIME`, `VER`, `VOL`, `CLS`, `EXIT`, `BREAK`, `VERIFY`, `CHCP`, `CTTY`, `LOADHIGH`/`LH`, `LFNFOR`
-
-External programs are resolved through the current directory and `PATH`. On POSIX systems, executable names are resolved using the host environment.
+- `/C command`: execute a command and exit.
+- `/K command`: execute a command, then continue interactively.
+- Without either switch, start an interactive session.
 
 ## Compatibility notes
 
-The goal is to reproduce observable COMMAND.COM behaviour, not to provide a modern `cmd.exe` replacement. Examples of DOS-era semantics retained by the implementation include:
+The implementation aims to reproduce observable COMMAND.COM behaviour, not the behaviour of modern `cmd.exe`. This includes batch-only `%VAR%` expansion, batch parameter handling, command-specific parsing, DOS-style wildcard matching, positional `COPY /A` and `/B` modes, and temporary-file-based pipelines.
 
-- Percent-variable and batch-argument expansion in batch files.
-- Batch control flow and the distinction between nested `CALL` and batch replacement.
-- COMMAND.COM-style redirection and pipe parsing.
-- DOS-style `COPY` options, concatenation and Ctrl-Z text-file handling.
-- DOS command names, switches and error messages where implemented.
+Platform differences remain:
 
-The implementation is still a compatibility work in progress. Host filesystem and process behaviour necessarily differ from real DOS/Windows 95 in some areas.
+- The portable shell exposes a single drive, mapped to the host filesystem.
+- POSIX host `PATH` entries are translated to and from DOS-style path-list syntax.
+- Long filenames are used directly; synthetic 8.3 short filenames are not provided.
+- `DATE` and `TIME` do not generally change the host system clock.
+- `CHCP` accepts a limited set of code pages but does not switch the host encoding.
+- DOS-specific memory models, resident/transient relocation, ROM support, and Win95-specific disk hooks are outside the current scope.
 
-## Platform limitations
+## Tests
 
-- The portable shell exposes a single logical `C:` drive. On POSIX, it maps to the host root.
-- POSIX paths and host process execution are adapted to the shell's DOS-style command environment.
-- Long filenames are used directly; synthetic 8.3 aliases are not provided.
-- `CHCP` accepts a limited set of code-page numbers but does not change the host process encoding.
-- Date/time changes are session-local where the host does not permit changing the system clock.
-- DOS memory management, resident/transient relocation, ROM builds, and legacy disk hooks are outside the current scope.
+Run the platform-appropriate test suite after building:
 
-## Source layout
+```sh
+bash tests/run-tests.sh ./commandpp
+```
 
-- `include/cmdpp/` — public project headers.
-- `src/` — portable shell, command implementations and platform backends.
-- `tests/` — Windows and POSIX behaviour tests.
+On Windows:
 
-### About the local `real/` directory
+```powershell
+powershell -File tests\run-tests.ps1 -Exe .\commandpp.exe
+```
 
-In the development workspace, `real/` refers to the separate MS-DOS 7 reference-source tree used for source-level comparison. It is not part of commandpp's implementation, is not required by the build or tests, and is not included in this repository. The portable implementation remains in `src/`; reference material is kept separate.
+The tests cover batch control flow, environment expansion, redirection, pipelines, file commands, reverse directory sorting and selected `COPY` semantics.
 
-## Notices
+## Attribution
 
-See [NOTICE](NOTICE) for project attribution and trademark information.
+This is an independent implementation. See [NOTICE](NOTICE) for attribution and trademark information.
