@@ -84,6 +84,13 @@ try {
     if (-not (Test-Path 'renamed.bat')) { Write-Host 'ok:   delete' -ForegroundColor Green }
     else { Write-Host 'FAIL: delete' -ForegroundColor Red; $failures++ }
 
+    # ---- DIR reverse sorting (strict weak ordering) ---------------------
+    Set-Content -Path 'so_a.txt' -Value 'A'
+    Set-Content -Path 'so_b.txt' -Value 'B'
+    Set-Content -Path 'so_c.txt' -Value 'C'
+    $sorted = & $exe /C 'dir /b /o-n so_*.txt'
+    Assert-Equal 'dir /o-n reverse name sort' ($sorted -join ',') 'so_c.txt,so_b.txt,so_a.txt'
+
     # ---- COPY semantics -------------------------------------------------
     New-Item -ItemType Directory -Force 'copyd' | Out-Null
     [IO.File]::WriteAllText((Join-Path $testsDir 'copyd\a.txt'), "AAA`n")
@@ -114,7 +121,8 @@ try {
     Assert-Equal 'COPYCMD=/Y applies inside batch' ((Get-Content 'joined.txt' -Raw) -replace "`r?`n", '') 'AAA'
 } finally {
     Remove-Item 'redirect.out', 'copied.bat', 'renamed.bat', 'a.txt', 'b.txt', 'joined.txt',
-        'out_b.bin', 'out_a.txt', 'out_pos.txt', 'bin.dat', 'copycmd.bat' -ErrorAction SilentlyContinue
+        'out_b.bin', 'out_a.txt', 'out_pos.txt', 'bin.dat', 'copycmd.bat',
+        'so_a.txt', 'so_b.txt', 'so_c.txt' -ErrorAction SilentlyContinue
     Remove-Item 'copyd' -Recurse -Force -ErrorAction SilentlyContinue
     Pop-Location
 }

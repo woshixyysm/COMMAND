@@ -1,6 +1,7 @@
 #include "fileutil.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdio>
 #include <ctime>
@@ -342,29 +343,35 @@ void Shell::cmd_dir(const Invocation& inv) {
     bool any_files = false;
 
     auto sort_entries = [&](std::vector<Entry>& entries) {
-        std::sort(entries.begin(), entries.end(), [&](const Entry& a, const Entry& b) {
-            bool less = false;
-            if (opt.dirs_first && a.is_dir != b.is_dir) {
-                less = a.is_dir;
-            } else if (opt.sort == 'S') {
-                less = a.size < b.size;
-            } else if (opt.sort == 'D') {
-                less = a.mtime < b.mtime;
-            } else if (opt.sort == 'E') {
-                auto ext_of = [](const std::string& n) {
-                    std::string up = text::upper(n);
-                    auto dot = up.find_last_of('.');
-                    return dot == std::string::npos ? std::string() : up.substr(dot + 1);
-                };
-                std::string ea = ext_of(a.name), eb = ext_of(b.name);
-                if (ea != eb)
-                    less = ea < eb;
-                else
-                    less = text::upper(a.name) < text::upper(b.name);
-            } else {
-                less = text::upper(a.name) < text::upper(b.name);
+        auto icompare = [](std::string_view x, std::string_view y) {
+            const std::size_t common = std::min(x.size(), y.size());
+            for (std::size_t i = 0; i < common; ++i) {
+                const int ca = std::toupper(static_cast<unsigned char>(x[i]));
+                const int cb = std::toupper(static_cast<unsigned char>(y[i]));
+                if (ca != cb) return ca < cb ? -1 : 1;
             }
-            return opt.reverse ? !less : less;
+            if (x.size() == y.size()) return 0;
+            return x.size() < y.size() ? -1 : 1;
+        };
+        auto extension_of = [](std::string_view name) {
+            auto dot = name.find_last_of('.');
+            return dot == std::string_view::npos ? std::string_view{} : name.substr(dot + 1);
+        };
+        std::sort(entries.begin(), entries.end(), [&](const Entry& a, const Entry& b) {
+            int cmp = 0;
+            if (opt.dirs_first && a.is_dir != b.is_dir) {
+                cmp = a.is_dir ? -1 : 1;
+            } else if (opt.sort == 'S') {
+                cmp = a.size < b.size ? -1 : (a.size > b.size ? 1 : 0);
+            } else if (opt.sort == 'D') {
+                cmp = a.mtime < b.mtime ? -1 : (b.mtime < a.mtime ? 1 : 0);
+            } else if (opt.sort == 'E') {
+                cmp = icompare(extension_of(a.name), extension_of(b.name));
+                if (cmp == 0) cmp = icompare(a.name, b.name);
+            } else {
+                cmp = icompare(a.name, b.name);
+            }
+            return opt.reverse ? cmp > 0 : cmp < 0;
         });
     };
 

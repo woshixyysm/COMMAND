@@ -1,0 +1,7 @@
+Fix DIR reverse sort comparator to keep strict weak ordering
+
+Compare three-way first and only then apply /O- inversion, so equal entries no longer report "less than" in both directions. The previous "!less" form violated std::sort requirements (UB) whenever two entries compared equal.
+
+Co-authored-by: Codex <noreply@openai.com>
+Co-By: Claude Oups5.5 <noreply@anthropic.com>
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

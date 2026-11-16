@@ -89,6 +89,13 @@ if [ -f renamed.bat ] && [ ! -f copied.bat ]; then echo 'ok:   rename'; else ech
 "$exe" /C 'del renamed.bat' >/dev/null
 if [ ! -f renamed.bat ]; then echo 'ok:   delete'; else echo 'FAIL: delete'; failures=$((failures + 1)); fi
 
+# ---- DIR reverse sorting (strict weak ordering) -------------------------
+printf 'A\n' > so_a.txt
+printf 'B\n' > so_b.txt
+printf 'C\n' > so_c.txt
+sorted="$("$exe" /C 'dir /b /o-n so_*.txt' | tr '\n' ',' | sed 's/,$//')"
+assert_equal 'dir /o-n reverse name sort' "$sorted" 'so_c.txt,so_b.txt,so_a.txt'
+
 # ---- COPY semantics -----------------------------------------------------
 mkdir -p copyd
 printf 'AAA\n' > copyd/a.txt
@@ -118,7 +125,7 @@ printf '@echo off\nset COPYCMD=/Y\ncopy copyd/a.txt joined.txt\n' > copycmd.bat
 printf 'N\n' | "$exe" /C 'copycmd.bat' >/dev/null
 assert_equal 'COPYCMD=/Y applies inside batch' "$(tr -d '\r\n' < joined.txt)" 'AAA'
 
-rm -rf copyd a.txt b.txt joined.txt out_b.bin out_a.txt out_pos.txt bin.dat copycmd.bat copied.bat renamed.bat
+rm -rf copyd a.txt b.txt joined.txt out_b.bin out_a.txt out_pos.txt bin.dat copycmd.bat copied.bat renamed.bat so_a.txt so_b.txt so_c.txt
 
 if [ "$failures" -gt 0 ]; then
     echo "$failures test(s) failed"
